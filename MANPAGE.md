@@ -3,8 +3,8 @@
 title: DIDDER
 section: 1
 header: User Manual
-footer: didder v1.3.0
-date: December 20, 2023
+footer: didder v1.3.0-15-g870ed78
+date: October 20, 2025
 ---
 
 # NAME
@@ -48,6 +48,8 @@ A list of all color names is available at <https://www.w3.org/TR/SVG11/types.htm
 Images are converted to grayscale automatically if the palette is grayscale. This produces more correct results.
 
 Here's an example of all color formats being used: **\--palette \'23,230,100 D24242 135 forestGreen'**
+
+Alternative, you can write mmcq:N in lieu of color names, where N is a power of two. This will use the median cut algorithm to pick the top N colors in the image, and set those as the palette.
 
 **-r**, **\--recolor** *COLORS*
 
@@ -136,7 +138,7 @@ Grayscale and RGB random dithering
 
 Accepts two arguments (min and max) for RGB or grayscale, or six (min/max for each channel) to control each RGB channel. Arguments can be separated by commas or spaces.
 
-Random dithering adds random noise to the image. The min and max numbers limit the range of the random noise. A good default is -0.5,0.5, which means that a middle gray pixel is 50% likely to become black and 50% likely to become white, assuming a black and white palette. So -0.2,2.0 will reduce the noise (20%), while -0.7,0.7 will increase it (70%). Values like -0.5,0.7 will bias the noise to one end of the channel(s).
+Random dithering adds random noise to the image. The min and max numbers limit the range of the random noise. A good default is -0.5,0.5, which means that a middle gray pixel is 50% likely to become black and 50% likely to become white, assuming a black and white palette. So -0.2,0.2 will reduce the noise (20%), while -0.7,0.7 will increase it (70%). Values like -0.5,0.7 will bias the noise to one end of the channel(s).
 
 **-s**, **\--seed** *DECIMAL*
 
