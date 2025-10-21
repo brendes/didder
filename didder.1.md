@@ -45,6 +45,8 @@ Homepage: <https://github.com/makeworld-the-better-one/didder>
 
     Here's an example of all color formats being used: **\--palette \'23,230,100 D24242 135 forestGreen'**
 
+    Alternative, you can write mmcq:N in lieu of color names, where N is a power of two. This will use the median cut algorithm to pick the top N colors in the image, and set those as the palette.
+
 **-r**, **\--recolor** *COLORS*
 :   Set the color palette used for replacing the dithered color palette after dithering. The argument syntax is the same as **\--palette**, with one exception. It also supports RGB*A* tuples, so 4 values. This means you can also choose to change the opacity of a palette color after dithering. The values are not premultiplied, so set the RGB to the color you want as you'd expect.
 

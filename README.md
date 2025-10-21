@@ -49,6 +49,7 @@ More methods of dithering are being worked on, such as Riemersma, Yuliluoma, and
 - Combine multiple images into an animated GIF
 - Uses all CPU cores when possible
 - Support images with transparency (alpha channel is kept the same)
+- Have the palette chosen for you based on colors in the image
 
 ## Installation
 

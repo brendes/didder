@@ -10,12 +10,14 @@ import (
 	"image/png"
 	"io"
 	"math"
+	"math/bits"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/disintegration/imaging"
+	"github.com/joshdk/quantize"
 	"github.com/makeworld-the-better-one/dither/v2"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/image/colornames"
@@ -49,7 +51,9 @@ func parsePercentArg(arg string, maxOne bool) (float64, error) {
 
 // globalFlag returns the value of flag at the top level of the command.
 // For example, with the command:
-//     dither --threads 1 edm -s Simple2D
+//
+//	dither --threads 1 edm -s Simple2D
+//
 // "threads" is a global flag, and "s" is a flag local to the edm subcommand.
 func globalFlag(flag string, c *cli.Context) interface{} {
 	ancestor := c.Lineage()[len(c.Lineage())-1]
@@ -334,7 +338,7 @@ func postProcImage(img image.Image) image.Image {
 
 // processImages dithers all the input images and writes them.
 // It handles all image I/O.
-func processImages(d *dither.Ditherer, c *cli.Context) error {
+func processImages(ditherConfig *dither.Ditherer, c *cli.Context) error {
 	outPath := globalFlag("out", c).(string)
 
 	// Setup for if it's an animated GIF output
@@ -390,6 +394,7 @@ func processImages(d *dither.Ditherer, c *cli.Context) error {
 		if err != nil {
 			return fmt.Errorf("error loading '%s': %w", inputPath, err)
 		}
+		d := getDitherer(ditherConfig, img)
 
 		if isAnimGIF {
 			if i == 0 {
@@ -546,4 +551,33 @@ func processImages(d *dither.Ditherer, c *cli.Context) error {
 	}
 	file.Close()
 	return nil
+}
+
+// getDitherer returns the ditherer for an image, accounting for it possibly missing a palette
+// and needing one generated via MMCQ.
+func getDitherer(d *dither.Ditherer, img image.Image) *dither.Ditherer {
+	if mmcqNum == 0 {
+		// Assume ditherer is set up correctly
+		return d
+	}
+
+	// Get palette
+	// mmcq number is palette size, get log2 of that to get number of "levels" or cuts
+	paletteRGBA := quantize.Image(img, bits.Len(uint(mmcqNum))-1)
+	// Convert to NRGBA and store in global var
+	// This allows use by recolor if necessary
+	palette = make([]color.Color, len(paletteRGBA))
+	for i, c := range paletteRGBA {
+		palette[i] = color.NRGBAModel.Convert(c)
+	}
+
+	// Create proper ditherer
+	d2 := dither.NewDitherer(palette)
+	// Copy properties
+	d2.Matrix = d.Matrix
+	d2.Mapper = d.Mapper
+	d2.Special = d.Special
+	d2.SingleThreaded = d.SingleThreaded
+	d2.Serpentine = d.Serpentine
+	return d2
 }

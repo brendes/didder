@@ -32,6 +32,9 @@ var (
 	// Guaranteed to only hold color.NRGBA.
 	recolorPalette []color.Color
 
+	// mmcqNum is set >0 if the user asked for color quantization.
+	mmcqNum int
+
 	grayscale bool
 
 	// Range -100,100
@@ -55,7 +58,9 @@ var (
 	// upscale will always be 1 or above
 	upscale int
 
-	ditherer *dither.Ditherer
+	// Options are set first, then copied into another ditherer with a palette set
+	// This allows the palette to change per-image, useful for MMCQ
+	ditherer = &dither.Ditherer{}
 
 	// range [-1, 1]
 	strength float32
@@ -70,36 +75,64 @@ func preProcess(c *cli.Context) error {
 	runtime.GOMAXPROCS(int(c.Uint("threads")))
 
 	var err error
-	palette, err = parseColors("palette", c)
-	if err != nil {
-		return err
-	}
-	if len(palette) < 2 {
-		return errors.New("the palette must have at least two colors")
+	paletteStr := globalFlag("palette", c).(string)
+	if strings.HasPrefix(paletteStr, "mmcq:") {
+		// Built-in quantization algorithm rather than list of colors
+		mmcqNum, err = strconv.Atoi(paletteStr[5:])
+		if err != nil || mmcqNum < 2 {
+			return errors.New("power of two number must be after 'mmcq:'")
+		}
+		if (mmcqNum & (mmcqNum - 1)) != 0 {
+			return errors.New("mmcq number must be a power of two")
+		}
 	}
 
-	if c.String("recolor") != "" {
-		recolorPalette, err = parseColors("recolor", c)
+	if mmcqNum == 0 {
+		palette, err = parseColors("palette", c)
 		if err != nil {
 			return err
 		}
-		if len(recolorPalette) != len(palette) {
-			return errors.New("recolor palette must have the same number of colors as the initial palette")
+		if len(palette) < 2 {
+			return errors.New("the palette must have at least two colors")
 		}
-	}
 
-	// Check if palette is grayscale and make image grayscale
-	// Or if the user forces it
+		if c.String("recolor") != "" {
+			recolorPalette, err = parseColors("recolor", c)
+			if err != nil {
+				return err
+			}
+			if len(recolorPalette) != len(palette) {
+				return errors.New("recolor palette must have the same number of colors as the initial palette")
+			}
+		}
 
-	grayscale = true
-	if !c.Bool("grayscale") {
-		// Grayscale isn't specified by the user
-		// So check to see if palette is grayscale
-		for _, c := range palette {
-			r, g, b, _ := c.RGBA()
-			if r != g || g != b {
-				grayscale = false
-				break
+		// Check if palette is grayscale and make image grayscale
+		// Or if the user forces it
+
+		grayscale = true
+		if !c.Bool("grayscale") {
+			// Grayscale isn't specified by the user
+			// So check to see if palette is grayscale
+			for _, c := range palette {
+				r, g, b, _ := c.RGBA()
+				if r != g || g != b {
+					grayscale = false
+					break
+				}
+			}
+		}
+	} else {
+		// For now just maintain the user's choice
+		// MMCQ is not going to be grayscale unless the image is grayscale anyway most likely
+		grayscale = c.Bool("grayscale")
+
+		if c.String("recolor") != "" {
+			recolorPalette, err = parseColors("recolor", c)
+			if err != nil {
+				return err
+			}
+			if len(recolorPalette) != mmcqNum {
+				return errors.New("recolor palette must have the same number of colors as the initial palette")
 			}
 		}
 	}
@@ -226,7 +259,10 @@ func preProcess(c *cli.Context) error {
 		upscale = 1
 	}
 
-	ditherer = dither.NewDitherer(palette)
+	if mmcqNum == 0 {
+		// Use single palette for every image
+		ditherer = dither.NewDitherer(palette)
+	}
 
 	tmp, err := parsePercentArg(c.String("strength"), true)
 	if err != nil {
