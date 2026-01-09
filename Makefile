@@ -1,4 +1,4 @@
-GITV  != git describe --tags
+GITV  != git describe --tags 2>/dev/null || git rev-parse --short HEAD
 GITC  != git rev-parse --verify HEAD
 SRC   != find . -type f -name '*.go' ! -name '*_test.go'
 TEST  != find . -type f -name '*_test.go'
@@ -16,8 +16,13 @@ RM      := rm
 SED     := sed
 PANDOC  := pandoc
 GZIP    := gzip
-MANDB   := mandb
 CP      := cp
+
+ifneq ($(shell command -v mandb 2>/dev/null),)
+	MANDB := mandb
+else
+	MANDB = makewhatis $(PREFIX)/share/man
+endif
 
 didder: go.mod go.sum $(SRC)
 	GO111MODULE=on CGO_ENABLED=0 $(GO) build -o $@ -ldflags="-s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.builtBy=$(BUILDER)"
@@ -44,12 +49,14 @@ man:
 install: didder
 	$(INSTALL) -d $(PREFIX)/bin/
 	$(INSTALL) -m 755 didder $(PREFIX)/bin/didder
-	$(GZIP) -c didder.1 > /usr/share/man/man1/didder.1.gz
+	$(INSTALL) -d $(PREFIX)/share/man/man1/
+	$(GZIP) -c didder.1 > $(PREFIX)/share/man/man1/didder.1.gz
 	$(MANDB)
 
 .PHONY: uninstall
 uninstall:
 	$(RM) -f $(PREFIX)/bin/didder
+	$(RM) -f $(PREFIX)/share/man/man1/didder.1.gz
 
 # Development helpers
 

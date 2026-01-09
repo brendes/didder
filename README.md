@@ -101,6 +101,14 @@ You can update it with:
 brew upgrade --fetch-HEAD didder
 ```
 
+The following should work on Termux:
+
+```
+make PREFIX=$TERMUX__PREFIX MANDB=true install
+```
+
+Termux uses `mandoc` instead of `mandb`.
+
 ## Getting started
 
 ```
