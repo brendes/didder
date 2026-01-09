@@ -104,10 +104,8 @@ brew upgrade --fetch-HEAD didder
 The following should work on Termux:
 
 ```
-make PREFIX=$TERMUX__PREFIX MANDB=true install
+make PREFIX=$TERMUX__PREFIX install
 ```
-
-Termux uses `mandoc` instead of `mandb`.
 
 ## Getting started
 
